@@ -1,4 +1,5 @@
 from torch import nn
+from torch.nn import functional
 import torch
 from typing import Optional
 from typing import Tuple
@@ -24,6 +25,16 @@ class Decoder(nn.Module):
             self.embedding = nn.Embedding.from_pretrained(pretrained_embeddings)
         self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=lstm_hidden_size, dropout=lstm_dropout,
                             batch_first=True, bidirectional=False, num_layers=lstm_num_layers)
+        self.linear = nn.Linear(in_features=lstm_hidden_size, out_features=vocab_size)
 
     def forward(self, inputs: torch.LongTensor, hidden: Tuple):
+        """
+
+        :param inputs: 输入序列，形状为(batch_size, input_length, vocab_size)
+        :param hidden: Encoder最后时刻的隐藏层输出h_n和c_n
+        :return: Decoder最后时刻输出的token分类预测，形状为(num_layers, batch_size,
+        """
         inputs = self.embedding(inputs)
+        _, (hn, cn) = self.lstm(inputs, hidden)
+        hn = self.linear(hn)
+        return functional.log_softmax(input=hn, dim=-1)

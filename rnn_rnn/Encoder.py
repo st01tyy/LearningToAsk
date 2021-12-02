@@ -27,11 +27,19 @@ class Encoder(nn.Module):
     def forward(self, inputs: torch.LongTensor):
         """
         前向转播
-        :param inputs: 输入序列，形状为(batch_size, n)
-        :returns: outputs, h_n, c_n
-        :return: outputs: 输出序列，形状为(batch_size, n, lstm_hidden_size)
-        :return: h_n: 时刻n的隐含层输出，形状为(batch_size, lstm_hidden_size)
-        :return: c_n: 时刻n的记忆细胞，形状为(batch_size, lstm_hidden_size)
+        :param inputs: 输入序列，形状为(batch_size, input_length, vocab_size)
+        :returns: hn, cn
+        :return: h_n: 时刻n的隐含层输出，形状为(lstm_num_layers, batch_size, lstm_hidden_size)
+        :return: c_n: 时刻n的记忆细胞，形状为(lstm_num_layers, batch_size, lstm_hidden_size)
         """
         inputs = self.embedding(inputs)
-        return self.lstm(inputs)
+        _, (hn, cn) = self.lstm(inputs)
+        temp = torch.Tensor()
+        for i in range(0, self.lstm.num_layers):
+            torch.cat((temp, torch.unsqueeze(hn[2 * i] + hn[2 * i + 1], dim=0)), dim=0)
+        hn = temp
+        temp = torch.Tensor()
+        for i in range(0, self.lstm.num_layers):
+            torch.cat((temp, torch.unsqueeze(cn[2 * i] + cn[2 * i + 1], dim=0)), dim=0)
+        cn = temp
+        return hn, cn
