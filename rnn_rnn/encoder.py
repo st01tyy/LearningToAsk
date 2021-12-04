@@ -33,13 +33,13 @@ class Encoder(nn.Module):
         :return: c_n: 时刻n的记忆细胞，形状为(lstm_num_layers, batch_size, lstm_hidden_size)
         """
         inputs = self.embedding(inputs)
-        _, (hn, cn) = self.lstm(inputs)
-        temp = torch.Tensor()
+        encoder_outputs, (hn, cn) = self.lstm(inputs)
+        temp = torch.Tensor().cuda()
         for i in range(0, self.lstm.num_layers):
-            torch.cat((temp, torch.unsqueeze(hn[2 * i] + hn[2 * i + 1], dim=0)), dim=0)
+            temp = torch.cat((temp, torch.unsqueeze(hn[2 * i] + hn[2 * i + 1], dim=0)), dim=0)
         hn = temp
-        temp = torch.Tensor()
+        temp = torch.Tensor().cuda()
         for i in range(0, self.lstm.num_layers):
-            torch.cat((temp, torch.unsqueeze(cn[2 * i] + cn[2 * i + 1], dim=0)), dim=0)
+            temp = torch.cat((temp, torch.unsqueeze(cn[2 * i] + cn[2 * i + 1], dim=0)), dim=0)
         cn = temp
-        return hn, cn
+        return encoder_outputs, (hn, cn)

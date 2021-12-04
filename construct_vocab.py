@@ -31,6 +31,12 @@ def main(embedding_dim: int, use_pretrained_embeddings: bool = True):
                 embeddings.append(temp_embedding)
             index += 1
     print('read complete')
+    temp_tokens = tokens[0:45000]
+    temp_tokens.append(tokens[len(tokens) - 1])
+    temp_embeddings = embeddings[0:45000]
+    temp_embeddings.append(embeddings[len(embeddings) - 1])
+    tokens = temp_tokens
+    embeddings = temp_embeddings
     SOS_TOKEN = '<sos>'
     EOS_TOKEN = '<eos>'
     PAD_TOKEN = '<pad>'
@@ -43,13 +49,13 @@ def main(embedding_dim: int, use_pretrained_embeddings: bool = True):
         embeddings.append(np.random.rand(embedding_dim).tolist())
         embeddings.append(np.random.rand(embedding_dim).tolist())
         embeddings.append(np.random.rand(embedding_dim).tolist())
-    index += 3
-    print('vocab size: ' + str(index))
+    # index += 3
+    print('vocab size: ' + str(len(tokens)))
 
     TOKEN_PATH = 'vocab/tokens.txt'
     print('saving tokens')
     with open(TOKEN_PATH, mode='w') as file_object:
-        for i in range(0, index):
+        for i in range(0, len(tokens)):
             file_object.write(tokens[i] + '\n')
     print('tokens saved')
 
@@ -58,7 +64,7 @@ def main(embedding_dim: int, use_pretrained_embeddings: bool = True):
     EMBEDDING_PATH = 'vocab/embeddings.pth'
     print('saving pretrained embeddings')
     with open(EMBEDDING_PATH, mode='wb') as file_object:
-        for i in range(0, index):
+        for i in range(0, len(embeddings)):
             file_object.write(struct.pack(str(embedding_dim) + 'd', *(embeddings[i])))
     print('embeddings saved')
 
