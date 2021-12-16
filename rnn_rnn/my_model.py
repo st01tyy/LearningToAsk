@@ -1,5 +1,5 @@
-from torch import nn
 import torch
+from torch import nn
 from typing import Optional
 from encoder import Encoder
 from decoder import Decoder

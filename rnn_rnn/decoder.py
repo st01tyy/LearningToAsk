@@ -1,8 +1,7 @@
+import torch
 from torch import nn
 from torch.nn import functional
-import torch
-from typing import Optional
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 class Decoder(nn.Module):
@@ -10,7 +9,7 @@ class Decoder(nn.Module):
                  lstm_hidden_size: int = 600, lstm_dropout: float = 0.3, lstm_num_layers: int = 2,
                  pretrained_embeddings: Optional[torch.Tensor] = None):
         """
-
+        构造函数
         :param embedding_dim: 词向量维度
         :param vocab_size: 词表大小
         :param lstm_hidden_size: LSTM模型向量维度
@@ -18,6 +17,7 @@ class Decoder(nn.Module):
         :param lstm_num_layers: LSTM层数
         :param pretrained_embeddings: 预训练词向量，形状为(vocab_size, embedding_dim)
         """
+
         super().__init__()
         if pretrained_embeddings is None:
             self.embedding = nn.Embedding(vocab_size, embedding_dim)
@@ -31,12 +31,13 @@ class Decoder(nn.Module):
 
     def forward(self, inputs: torch.LongTensor, hidden: Tuple, encoder_outputs: torch.Tensor):
         """
-
+        前向传播
         :param encoder_outputs: 编码器所有时刻的隐含层输出，形状为(batch_size, input_length, 2 * lstm_hidden_size)
         :param inputs: 输入序列，形状为(batch_size, input_length, vocab_size)
         :param hidden: Encoder最后时刻的隐藏层输出h_n和c_n
-        :return: Decoder最后时刻输出的token分类预测，形状为(num_layers, batch_size,
+        :return: Decoder最后时刻，最后一层输出的token分类预测，形状为(batch_size, vocab_size)
         """
+
         inputs = self.embedding(inputs)
         _, (hn, cn) = self.lstm(inputs, hidden)
 
@@ -45,12 +46,10 @@ class Decoder(nn.Module):
         # 计算注意力分数
         score = torch.unsqueeze(input=hn, dim=1)  # score size: (batch_size, 1, lstm_hidden_size)
         score = self.attention_linear(score)  # score size: (batch_size, 1, 2 * lstm_hidden_size)
-        t_encoder_outputs = torch.transpose(input=encoder_outputs, dim0=1, dim1=2)
-
         # t_encoder_outputs size: (batch_size, 2 * lstm_hidden_size, input_length)
-        print('Encoder输出矩阵转置处理后的形状为: ', t_encoder_outputs.size())
+        t_encoder_outputs = torch.transpose(input=encoder_outputs, dim0=1, dim1=2)
         score = score.bmm(t_encoder_outputs)  # score size: (batch_size, 1, input_length)
-        print('最终score的形状为: ', score.size())
+        score = functional.softmax(input=score, dim=-1)
 
         # 计算Encoder outputs的注意力分数加权的向量表示
         c = score.bmm(encoder_outputs)          # c size: (batch_size, 1, 2 * lstm_hidden_size)
