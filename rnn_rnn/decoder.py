@@ -51,7 +51,7 @@ class Decoder(nn.Module):
         score = score.bmm(t_encoder_outputs)  # score size: (batch_size, 1, input_length)
         score = functional.softmax(input=score, dim=-1)
 
-        # 计算Encoder outputs的注意力分数加权的向量表示
+        # 计算Encoder outputs的注意力分数加权和
         c = score.bmm(encoder_outputs)          # c size: (batch_size, 1, 2 * lstm_hidden_size)
         c = torch.squeeze(input=c, dim=1)  # c size: (batch_size, 2 * lstm_hidden_size)
 
