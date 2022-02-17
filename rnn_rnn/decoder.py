@@ -31,33 +31,29 @@ class Decoder(nn.Module):
 
     def forward(self, inputs: torch.LongTensor, hidden: Tuple, encoder_outputs: torch.Tensor):
         """
-        前向传播
-        :param encoder_outputs: 编码器所有时刻的隐含层输出，形状为(batch_size, input_length, 2 * lstm_hidden_size)
-        :param inputs: 输入序列，形状为(batch_size, input_length, vocab_size)
-        :param hidden: Encoder最后时刻的隐藏层输出h_n和c_n
-        :return: Decoder最后时刻，最后一层输出的token分类预测，形状为(batch_size, vocab_size)
+
+        :param encoder_outputs: (batch_size, encoder_length, 2 * lstm_hidden_size)
+        :param inputs: (batch_size, decoder_length)
+        :param hidden: Decoder上一时刻的隐含层输出或Encoder最后时刻的隐藏层输出
+        :return: Decoder每一时刻的单词分类，形状为(batch_size, decoder_length, vocab_size)
         """
 
         inputs = self.embedding(inputs)
-        _, (hn, cn) = self.lstm(inputs, hidden)
-
-        hn = hn[self.lstm.num_layers - 1]  # hn size: (batch_size, lstm_hidden_size)    # 只提取最后一层的hn
+        hidden_outputs, _= self.lstm(inputs, hidden)    #hidden_outputs: (batch_size, decoder_length, lstm_hidden_size)
 
         # 计算注意力分数
-        score = torch.unsqueeze(input=hn, dim=1)  # score size: (batch_size, 1, lstm_hidden_size)
-        score = self.attention_linear(score)  # score size: (batch_size, 1, 2 * lstm_hidden_size)
-        # t_encoder_outputs size: (batch_size, 2 * lstm_hidden_size, input_length)
+        score = self.attention_linear(hidden_outputs)  # score size: (batch_size, decoder_length, 2 * lstm_hidden_size)
+        # t_encoder_outputs size: (batch_size, 2 * lstm_hidden_size, encoder_length)
         t_encoder_outputs = torch.transpose(input=encoder_outputs, dim0=1, dim1=2)
-        score = score.bmm(t_encoder_outputs)  # score size: (batch_size, 1, input_length)
+        score = score.bmm(t_encoder_outputs)  # score size: (batch_size, decoder_length, encoder_length)
         score = functional.softmax(input=score, dim=-1)
 
         # 计算Encoder outputs的注意力分数加权和
-        c = score.bmm(encoder_outputs)          # c size: (batch_size, 1, 2 * lstm_hidden_size)
-        c = torch.squeeze(input=c, dim=1)  # c size: (batch_size, 2 * lstm_hidden_size)
+        c = score.bmm(encoder_outputs)          # c size: (batch_size, decoder_length, 2 * lstm_hidden_size)
 
-        output = torch.cat((hn, c), dim=1)  # output size: (batch_size, 3 * lstm_hidden_size)
+        output = torch.cat((hidden_outputs, c), dim=2)  # output size: (batch_size, decoder_length, 3 * lstm_hidden_size)
         # 全连接+tanh
-        output = self.full_connection_linear(output)    # output size: (batch_size, vocab_size)
-        output = torch.tanh(output)    # output size: (batch_size, vocab_size)
-        output = self.output_linear(output)  # output size: (batch_size, vocab_size)
-        return functional.softmax(input=output, dim=-1)
+        output = self.full_connection_linear(output)    # output size: (batch_size, decoder_length, vocab_size)
+        output = torch.tanh(output)    # output size: (batch_size, decoder_length, vocab_size)
+        output = self.output_linear(output)  # output size: (batch_size, decoder_length, vocab_size)
+        return output
