@@ -65,7 +65,7 @@ class MyModel(nn.Module):
             outputs = self.decoder(inputs=decoder_inputs, hidden=hidden, encoder_outputs=encoder_outputs)   # (batch_size, 1, vocab_size)
             outputs = torch.squeeze(outputs, dim=1) # (batch_size, vocab_size)
             outputs = functional.log_softmax(outputs, dim=1)
-            scores, ids = torch.topk(outputs, beam_size, dim=1, largest=False)   # (batch_size, beam_size)
+            scores, ids = torch.topk(outputs, beam_size, dim=1, largest=True)   # (batch_size, beam_size)
             scores = scores.view((batch_size * beam_size, 1))   # (batch_size * beam_size, 1)
             ids = ids.view((batch_size * beam_size, 1)) # (batch_size * beam_size, 1)
 
@@ -132,7 +132,7 @@ class MyModel(nn.Module):
 
                 outputs = scores + outputs  # (batch_size * beam_size, vocab_size)
                 outputs = outputs.view(batch_size, beam_size * self.vocab_size)
-                scores, next_ids = torch.topk(outputs, beam_size, dim=1, largest=False)
+                scores, next_ids = torch.topk(outputs, beam_size, dim=1, largest=True)
                 scores = scores.view(batch_size * beam_size, 1)
                 ids = self._update_ids(ids, next_ids)
 
@@ -217,8 +217,6 @@ class MyModel(nn.Module):
         return res
 
 
-
-
 def model_test():
     import numpy as np
     model = MyModel(embedding_dim=30, vocab_size=100).cuda()
@@ -240,6 +238,7 @@ def model_beam_search_test():
     encoder_length = 32
     encoder_inputs = torch.randint(size=(batch_size, encoder_length), high=103, device='cuda')
     scores, words = model(encoder_inputs, beam_size=beam_size, sos_id=100, eos_id=101, pad_id=102, max_length=64)
+    print(scores)
     print(words)
 
 
